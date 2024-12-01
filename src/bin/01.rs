@@ -1,7 +1,7 @@
 advent_of_code::solution!(1);
 
 pub fn part_one(input: &str) -> Option<u32> {
-    let pairs: Vec<(u32, u32)> = input
+    let (mut list_1, mut list_2): (Vec<u32>, Vec<u32>) = input
         .lines()
         .map(|line| {
             let mut vals = line
@@ -11,24 +11,17 @@ pub fn part_one(input: &str) -> Option<u32> {
         })
         .collect();
 
-    let mut sorted_list_1: Vec<u32> = pairs.iter().map(|&(x, _)| x).collect();
-    let mut sorted_list_2: Vec<u32> = pairs.iter().map(|&(_, y)| y).collect();
+    list_1.sort_unstable();
+    list_2.sort_unstable();
 
-    sorted_list_1.sort_unstable();
-    sorted_list_2.sort_unstable();
-
-    let total_distance = sorted_list_1
-        .iter()
-        .zip(sorted_list_2)
-        .map(|(x, y)| x.abs_diff(y))
-        .sum();
+    let total_distance = list_1.iter().zip(list_2).map(|(x, y)| x.abs_diff(y)).sum();
 
     // Output the results
     Some(total_distance)
 }
 
 pub fn part_two(input: &str) -> Option<u32> {
-    let pairs: Vec<(u32, u32)> = input
+    let (list_1, list_2): (Vec<u32>, Vec<u32>) = input
         .lines()
         .map(|line| {
             let mut vals = line
@@ -38,8 +31,8 @@ pub fn part_two(input: &str) -> Option<u32> {
         })
         .collect();
 
-    let similarity_score = pairs.iter().fold(0, |acc, &(i, _)| {
-        acc + pairs.iter().filter(|&&(_, j)| i == j).count() as u32 * i
+    let similarity_score = list_1.iter().fold(0, |acc, &i| {
+        acc + list_2.iter().filter(|&&j| i == j).count() as u32 * i
     });
 
     Some(similarity_score)
