@@ -1,8 +1,9 @@
 advent_of_code::solution!(2);
 
 pub fn is_safe(input: &[i32]) -> bool {
-    let all_positive_or_negative = input.iter().all(|&x| x > 0) || input.iter().all(|&x| x < 0);
-    let within_bounds = input.iter().all(|&x| x.abs() > 0 && x.abs() < 4);
+    let diffs: Vec<i32> = input.windows(2).map(|x| x[0] - x[1]).collect();
+    let all_positive_or_negative = diffs.iter().all(|&x| x > 0) || diffs.iter().all(|&x| x < 0);
+    let within_bounds = diffs.iter().all(|&x| x.abs() > 0 && x.abs() < 4);
 
     all_positive_or_negative && within_bounds
 }
@@ -16,9 +17,7 @@ pub fn part_one(input: &str) -> Option<u32> {
                 .filter_map(|x| x.parse::<i32>().ok())
                 .collect();
 
-            let diffs: Vec<i32> = nums.windows(2).map(|x| x[0] - x[1]).collect();
-
-            is_safe(&diffs)
+            is_safe(&nums)
         })
         .count();
 
@@ -34,23 +33,20 @@ pub fn part_two(input: &str) -> Option<u32> {
                 .filter_map(|x| x.parse::<i32>().ok())
                 .collect();
 
-            let diffs: Vec<i32> = nums.windows(2).map(|x| x[0] - x[1]).collect();
-
-            if is_safe(&diffs) {
-                true
-            } else {
-                for i in 0..nums.len() {
-                    let mut temp_nums = nums.clone();
-                    temp_nums.remove(i);
-                    let tmp_diffs: Vec<i32> = temp_nums.windows(2).map(|x| x[0] - x[1]).collect();
-
-                    if is_safe(&tmp_diffs) {
-                        return true;
-                    }
-                }
-
-                false
+            if is_safe(&nums) {
+                return true;
             }
+
+            for i in 0..nums.len() {
+                let mut temp_nums = nums.clone();
+                temp_nums.remove(i);
+
+                if is_safe(&temp_nums) {
+                    return true;
+                }
+            }
+
+            false
         })
         .count();
 
