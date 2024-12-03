@@ -9,20 +9,16 @@ fn is_safe(input: &[i32]) -> bool {
 }
 
 fn is_safe_with_tolerance(input: &[i32]) -> bool {
-    if is_safe(&input) {
+    if is_safe(input) {
         return true;
     }
 
-    for i in 0..input.len() {
+    (0..input.len()).any(|i| {
         let mut temp_nums = input.to_vec();
         temp_nums.remove(i);
 
-        if is_safe(&temp_nums) {
-            return true;
-        }
-    }
-
-    false
+        is_safe(&temp_nums)
+    })
 }
 
 pub fn part_one(input: &str) -> Option<u32> {
