@@ -32,17 +32,12 @@ fn mid(update: &Update) -> u32 {
 fn reorder_update(update: &[u32], rules: &[PageOrderingRule]) -> Update {
     let mut new_update = update.to_vec();
 
-    let mut swapped = true;
-    while swapped {
-        swapped = false;
-        for rule in rules {
-            if !rule.is_valid(&new_update) {
-                let rule1_position = new_update.iter().position(|&x| x == rule.rule1).unwrap();
-                let rule2_position = new_update.iter().position(|&x| x == rule.rule2).unwrap();
+    for rule in rules {
+        if !rule.is_valid(&new_update) {
+            let rule1_position = new_update.iter().position(|&x| x == rule.rule1).unwrap();
+            let rule2_position = new_update.iter().position(|&x| x == rule.rule2).unwrap();
 
-                new_update.swap(rule1_position, rule2_position);
-                swapped = true;
-            }
+            new_update.swap(rule1_position, rule2_position);
         }
     }
 
@@ -52,13 +47,15 @@ fn reorder_update(update: &[u32], rules: &[PageOrderingRule]) -> Update {
 fn parse(input: &str) -> (Vec<PageOrderingRule>, Vec<Update>) {
     let (rules_input, updates_input) = input.split_once("\n\n").unwrap();
 
-    let rules = rules_input
+    let mut rules = rules_input
         .lines()
         .map(|line| {
             let (rule1, rule2) = line.split_once("|").unwrap();
             PageOrderingRule::new(rule1.parse().unwrap(), rule2.parse().unwrap())
         })
         .collect::<Vec<_>>();
+
+    rules.sort_by(|a, b| a.rule1.cmp(&b.rule1));
 
     let updates: Vec<Update> = updates_input
         .lines()
@@ -78,7 +75,7 @@ pub fn part_one(input: &str) -> Option<u32> {
     let result = updates
         .iter()
         .filter(|update| rules.iter().all(|rule| rule.is_valid(update)))
-        .map(|update| mid(update))
+        .map(mid)
         .sum();
 
     Some(result)

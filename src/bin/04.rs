@@ -3,7 +3,7 @@ advent_of_code::solution!(4);
 pub fn part_one(input: &str) -> Option<u32> {
     let grid: Vec<Vec<char>> = input.lines().map(|line| line.chars().collect()).collect();
     let height = grid.len();
-    let width = grid.get(0)?.len();
+    let width = grid.first()?.len();
 
     let mut counter = 0;
 
@@ -45,7 +45,7 @@ pub fn part_one(input: &str) -> Option<u32> {
 pub fn part_two(input: &str) -> Option<u32> {
     let grid: Vec<Vec<char>> = input.lines().map(|line| line.chars().collect()).collect();
     let height = grid.len();
-    let width = grid.get(0)?.len();
+    let width = grid.first()?.len();
 
     let mut counter = 0;
 
