@@ -1,111 +1,56 @@
-use std::collections::HashMap;
+use rayon::prelude::*;
 
 advent_of_code::solution!(7);
 
-#[derive(Debug)]
-struct Equation {
-    total: u64,
-    nums: Vec<u64>,
-}
-
-impl Equation {
-    fn new() -> Self {
-        Self {
-            total: 0,
-            nums: Vec::new(),
-        }
+fn apply(op: char, a: u64, b: u64) -> u64 {
+    match op {
+        '+' => a + b,
+        '*' => a * b,
+        '|' => (a * 10u64.pow(b.ilog10() + 1)) + b,
+        _ => unreachable!(),
     }
 }
 
-fn generate_permutations(
-    permutations_cache: &mut HashMap<usize, Vec<Vec<char>>>,
-    chars: &[char],
-    length: usize,
-) -> Vec<Vec<char>> {
-    if let Some(results) = permutations_cache.get(&length) {
-        return results.clone(); // Return a cloned result to avoid borrowing issues.
+fn try_evaluate(total: u64, nums: &mut [u64], ops: &[char]) -> bool {
+    if nums.len() <= 1 {
+        return nums[0] == total;
+    }
+    if nums[0] > total {
+        return false;
     }
 
-    let mut results = Vec::new();
-
-    fn backtrack(
-        current: &mut Vec<char>,
-        length: usize,
-        chars: &[char],
-        results: &mut Vec<Vec<char>>,
-    ) {
-        if current.len() == length {
-            results.push(current.clone());
-            return;
+    for op in ops {
+        let old = nums[1];
+        nums[1] = apply(*op, nums[0], nums[1]);
+        if try_evaluate(total, &mut nums[1..], ops) {
+            return true;
         }
-        for &ch in chars {
-            current.push(ch);
-            backtrack(current, length, chars, results);
-            current.pop();
-        }
+        nums[1] = old;
     }
-
-    backtrack(&mut Vec::new(), length, chars, &mut results);
-
-    // Insert into the cache after computation.
-    permutations_cache.insert(length, results.clone());
-
-    results
+    false
 }
 
-fn try_evaluate(
-    permutations_cache: &mut HashMap<usize, Vec<Vec<char>>>,
-    chars: &[char],
-    equation: Equation,
-) -> Option<u64> {
-    let test_opers = generate_permutations(permutations_cache, chars, equation.nums.len() - 1);
-
-    for oper in test_opers {
-        let mut result = equation.nums[0];
-
-        for (op, num) in oper.iter().zip(equation.nums.iter().skip(1)) {
-            match op {
-                '+' => result += num,
-                '*' => result *= num,
-                '|' => result = result * 10u64.pow(num.to_string().len() as u32) + num,
-                _ => panic!("Invalid operator"),
-            }
-        }
-
-        if result == equation.total {
-            return Some(result);
-        }
-    }
-
-    None
-}
-
-fn parse_equation(line: &str) -> Equation {
-    let mut equation = Equation::new();
-
+fn parse_equation(line: &str) -> (u64, Vec<u64>) {
     let (total, rest) = line.split_once(": ").unwrap();
+    let nums = rest.split(' ').filter_map(|num| num.parse().ok()).collect();
 
-    equation.total = total.parse().unwrap();
-
-    for num in rest.split(' ') {
-        if let Ok(num) = num.parse() {
-            equation.nums.push(num);
-        }
-    }
-
-    equation
+    (total.parse().unwrap(), nums)
 }
 
 pub fn part_one(input: &str) -> Option<u64> {
     let opers = vec!['*', '+'];
 
-    let mut permutations_cache: HashMap<usize, Vec<Vec<char>>> = HashMap::new();
-
     let calibration_result = input
         .lines()
+        .par_bridge()
         .filter_map(|line| {
-            let equation = parse_equation(line);
-            try_evaluate(&mut permutations_cache, &opers, equation)
+            let (total, mut nums) = parse_equation(line);
+
+            if try_evaluate(total, &mut nums, &opers) {
+                Some(total)
+            } else {
+                None
+            }
         })
         .sum();
 
@@ -115,12 +60,17 @@ pub fn part_one(input: &str) -> Option<u64> {
 pub fn part_two(input: &str) -> Option<u64> {
     let opers = vec!['*', '+', '|'];
 
-    let mut permutations_cache: HashMap<usize, Vec<Vec<char>>> = HashMap::new();
     let calibration_result = input
         .lines()
+        .par_bridge()
         .filter_map(|line| {
-            let equation = parse_equation(line);
-            try_evaluate(&mut permutations_cache, &opers, equation)
+            let (total, mut nums) = parse_equation(line);
+
+            if try_evaluate(total, &mut nums, &opers) {
+                Some(total)
+            } else {
+                None
+            }
         })
         .sum();
 
