@@ -28,34 +28,12 @@ fn parse_grid(input: &str) -> (HashMap<char, Vec<IVec2>>, IVec2, IVec2) {
     (grid, min_bounds, max_bounds)
 }
 
-pub fn part_one(input: &str) -> Option<u32> {
-    let (grid, min_bounds, max_bounds) = parse_grid(input);
-
-    let mut antinodes = HashSet::new();
-
-    for (_, positions) in grid.iter() {
-        for i in 0..positions.len() {
-            for j in (i + 1)..positions.len() {
-                let antinode1 = (positions[i] - positions[j]) + positions[i];
-                let antinode2 = (positions[j] - positions[i]) + positions[j];
-
-                if in_bounds(antinode1, min_bounds, max_bounds) {
-                    antinodes.insert(antinode1);
-                }
-
-                if in_bounds(antinode2, min_bounds, max_bounds) {
-                    antinodes.insert(antinode2);
-                }
-            }
-        }
-    }
-
-    Some(antinodes.len() as u32)
-}
-
-pub fn part_two(input: &str) -> Option<u32> {
-    let (grid, min_bounds, max_bounds) = parse_grid(input);
-
+fn find_antinodes(
+    grid: &HashMap<char, Vec<IVec2>>,
+    min_bounds: IVec2,
+    max_bounds: IVec2,
+    infinite: bool,
+) -> HashSet<IVec2> {
     let mut antinodes = HashSet::new();
 
     for (_, positions) in grid.iter() {
@@ -68,6 +46,10 @@ pub fn part_two(input: &str) -> Option<u32> {
                 while in_bounds(last_pos + offset1, min_bounds, max_bounds) {
                     last_pos += offset1;
                     antinodes.insert(last_pos);
+
+                    if !infinite {
+                        break;
+                    }
                 }
 
                 // offset 2
@@ -77,10 +59,30 @@ pub fn part_two(input: &str) -> Option<u32> {
                 while in_bounds(last_pos + offset2, min_bounds, max_bounds) {
                     last_pos += offset2;
                     antinodes.insert(last_pos);
+
+                    if !infinite {
+                        break;
+                    }
                 }
             }
         }
     }
+
+    antinodes
+}
+
+pub fn part_one(input: &str) -> Option<u32> {
+    let (grid, min_bounds, max_bounds) = parse_grid(input);
+
+    let antinodes = find_antinodes(&grid, min_bounds, max_bounds, false);
+
+    Some(antinodes.len() as u32)
+}
+
+pub fn part_two(input: &str) -> Option<u32> {
+    let (grid, min_bounds, max_bounds) = parse_grid(input);
+
+    let antinodes = find_antinodes(&grid, min_bounds, max_bounds, true);
 
     let antennas = grid
         .iter()
