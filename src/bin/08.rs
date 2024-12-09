@@ -86,12 +86,11 @@ pub fn part_two(input: &str) -> Option<u32> {
 
     let antennas = grid
         .iter()
-        .map(|(_, positions)| positions.clone())
-        .flatten()
+        .flat_map(|(_, positions)| positions.clone())
         .collect::<Vec<IVec2>>();
 
     // Combine the vectors
-    let combined: HashSet<_> = antinodes.into_iter().chain(antennas.into_iter()).collect();
+    let combined: HashSet<_> = antinodes.into_iter().chain(antennas).collect();
 
     Some(combined.len() as u32)
 }
