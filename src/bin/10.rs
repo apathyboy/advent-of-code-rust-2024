@@ -1,25 +1,25 @@
 use glam::IVec2;
+use itertools::Itertools;
 use std::collections::{HashMap, HashSet};
 advent_of_code::solution!(10);
 
-fn neighbors(pos: IVec2, current_height: u32, graph: &HashMap<IVec2, u32>) -> Vec<(IVec2, u32)> {
-    let mut neighbors = Vec::new();
-
-    for dir in &[
+fn neighbors<'a>(
+    pos: IVec2,
+    current_height: u32,
+    graph: &'a HashMap<IVec2, u32>,
+) -> impl Iterator<Item = (IVec2, u32)> + 'a {
+    const DIRECTIONS: [IVec2; 4] = [
         IVec2::new(0, 1),
         IVec2::new(0, -1),
         IVec2::new(1, 0),
         IVec2::new(-1, 0),
-    ] {
-        let new_pos = pos + *dir;
-        if let Some(height) = graph.get(&new_pos) {
-            if height == &(current_height + 1) {
-                neighbors.push((new_pos, *height));
-            }
-        }
-    }
+    ];
 
-    neighbors
+    DIRECTIONS
+        .iter()
+        .map(move |&dir| pos + dir)
+        .filter_map(move |new_pos| graph.get(&new_pos).map(|&height| (new_pos, height)))
+        .filter(move |&(_, height)| height == current_height + 1)
 }
 
 fn explore(
@@ -27,109 +27,77 @@ fn explore(
     current_height: u32,
     graph: &HashMap<IVec2, u32>,
     visited: &mut HashSet<IVec2>,
-    found: &mut HashSet<IVec2>,
-) {
-    visited.insert(pos);
-
-    for (neighbor, height) in neighbors(pos, current_height, graph) {
-        if visited.contains(&neighbor) {
-            continue;
-        }
-
-        if height == 9 {
-            found.insert(neighbor);
-            continue;
-        }
-
-        explore(neighbor, height, graph, visited, found);
-    }
-}
-
-fn explore2(
-    pos: IVec2,
-    current_height: u32,
-    graph: &HashMap<IVec2, u32>,
-    visited: &mut HashSet<IVec2>,
-    count: &mut usize,
+    found: &mut Vec<IVec2>,
 ) {
     if current_height == 9 {
-        *count += 1;
+        found.push(pos);
         return;
     }
 
     for (neighbor, height) in neighbors(pos, current_height, graph) {
-        if visited.contains(&neighbor) {
-            continue;
+        if visited.insert(neighbor) {
+            explore(neighbor, height, graph, visited, found);
+            visited.remove(&neighbor); // Backtracking
         }
-
-        visited.insert(neighbor);
-        explore2(neighbor, height, graph, visited, count);
-        visited.remove(&neighbor);
     }
 }
 
+fn parse_map(input: &str) -> HashMap<IVec2, u32> {
+    input
+        .lines()
+        .enumerate()
+        .flat_map(|(y, line)| {
+            line.chars().enumerate().map(move |(x, c)| {
+                let pos = IVec2::new(x as i32, y as i32);
+                let height = c.to_digit(10).unwrap();
+                (pos, height)
+            })
+        })
+        .collect()
+}
+
 pub fn part_one(input: &str) -> Option<u32> {
-    // parse the input into a hashmap of Vec2 positions as index and the values parsed as u32 values
-    let mut map: HashMap<IVec2, u32> = HashMap::new();
-    let mut trailheads: Vec<IVec2> = Vec::new();
+    let map: HashMap<IVec2, u32> = parse_map(input);
+    let trailheads: Vec<IVec2> = map
+        .iter()
+        .filter_map(|(pos, height)| if *height == 0 { Some(*pos) } else { None })
+        .collect();
 
-    for (y, line) in input.lines().enumerate() {
-        for (x, c) in line.chars().enumerate() {
-            let height = c.to_digit(10).unwrap();
-            let pos = IVec2::new(x as i32, y as i32);
+    let score = trailheads
+        .iter()
+        .map(|p| {
+            let mut visited = HashSet::new();
+            let mut found = Vec::new();
 
-            map.insert(pos, height);
+            explore(*p, 0, &map, &mut visited, &mut found);
 
-            if height == 0 {
-                trailheads.push(pos);
-            }
-        }
-    }
-
-    let mut score = 0;
-
-    for trailhead in trailheads.iter() {
-        let mut visited = HashSet::new();
-        let mut found = HashSet::new();
-
-        explore(*trailhead, 0, &map, &mut visited, &mut found);
-
-        score += found.len() as u32;
-    }
+            found.iter().unique().count() as u32
+        })
+        .sum();
 
     Some(score)
 }
 
 pub fn part_two(input: &str) -> Option<u32> {
-    // parse the input into a hashmap of Vec2 positions as index and the values parsed as u32 values
-    let mut map: HashMap<IVec2, u32> = HashMap::new();
-    let mut trailheads: Vec<IVec2> = Vec::new();
+    let map: HashMap<IVec2, u32> = parse_map(input);
+    let trailheads: Vec<IVec2> = map
+        .iter()
+        .filter_map(|(pos, height)| if *height == 0 { Some(*pos) } else { None })
+        .collect();
 
-    for (y, line) in input.lines().enumerate() {
-        for (x, c) in line.chars().enumerate() {
-            let height = c.to_digit(10).unwrap();
-            let pos = IVec2::new(x as i32, y as i32);
+    let score = trailheads
+        .iter()
+        .map(|p| {
+            let mut visited = HashSet::new();
+            let mut found = Vec::new();
 
-            map.insert(pos, height);
+            explore(*p, 0, &map, &mut visited, &mut found);
 
-            if height == 0 {
-                trailheads.push(pos);
-            }
-        }
-    }
+            found.len() as u32
+        })
+        .sum();
 
-    let mut score = 0;
-
-    for trailhead in trailheads.iter() {
-        let mut visited = HashSet::new();
-        let mut count = 0;
-
-        explore2(*trailhead, 0, &map, &mut visited, &mut count);
-
-        score += count;
-    }
-
-    Some(score as u32)
+    Some(score)
 }
 
 #[cfg(test)]
