@@ -3,11 +3,11 @@ use itertools::Itertools;
 use std::collections::{HashMap, HashSet};
 advent_of_code::solution!(10);
 
-fn neighbors<'a>(
+fn neighbors(
     pos: IVec2,
     current_height: u32,
-    graph: &'a HashMap<IVec2, u32>,
-) -> impl Iterator<Item = (IVec2, u32)> + 'a {
+    graph: &HashMap<IVec2, u32>,
+) -> impl Iterator<Item = (IVec2, u32)> + '_ {
     const DIRECTIONS: [IVec2; 4] = [
         IVec2::new(0, 1),
         IVec2::new(0, -1),
