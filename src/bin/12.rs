@@ -1,5 +1,5 @@
 use glam::IVec2;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 advent_of_code::solution!(12);
 
@@ -23,25 +23,23 @@ fn parse_map(input: &str) -> HashMap<IVec2, char> {
 
 fn find_regions(map: &HashMap<IVec2, char>) -> Vec<(char, Vec<IVec2>)> {
     let mut regions = Vec::new();
+    let mut visited = HashSet::new(); // Track visited positions to avoid redundant checks
 
     for (&pos, &c) in map {
-        if regions
-            .iter()
-            .any(|(_, region): &(char, Vec<IVec2>)| region.contains(&pos))
-        {
+        if visited.contains(&pos) {
             continue;
         }
 
-        // perform a breadth-first search on map to find regions with the same c that are touch at least one other region of the same value
+        // Perform a breadth-first search to find all connected regions with the same character
         let mut region = Vec::new();
         let mut queue = vec![pos];
 
-        while let Some(pos) = queue.pop() {
-            if region.contains(&pos) {
-                continue;
+        while let Some(curr_pos) = queue.pop() {
+            if !visited.insert(curr_pos) {
+                continue; // Skip if already visited
             }
 
-            region.push(pos);
+            region.push(curr_pos);
 
             for &dir in &[
                 IVec2::new(0, 1),
@@ -49,10 +47,10 @@ fn find_regions(map: &HashMap<IVec2, char>) -> Vec<(char, Vec<IVec2>)> {
                 IVec2::new(1, 0),
                 IVec2::new(-1, 0),
             ] {
-                let new_pos = pos + dir;
-                if let Some(&new_c) = map.get(&new_pos) {
-                    if new_c == c {
-                        queue.push(new_pos);
+                let neighbor = curr_pos + dir;
+                if let Some(&neighbor_c) = map.get(&neighbor) {
+                    if neighbor_c == c {
+                        queue.push(neighbor);
                     }
                 }
             }
