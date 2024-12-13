@@ -1,6 +1,12 @@
 use glam::I64Vec2;
+use once_cell::sync::Lazy;
+use rayon::prelude::*;
+use regex::Regex;
 
 advent_of_code::solution!(13);
+
+static BUTTON_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"X\+(\d+), Y\+(\d+)").unwrap());
+static PRIZE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"X\=(\d+), Y\=(\d+)").unwrap());
 
 #[derive(Debug)]
 struct Game {
@@ -50,9 +56,7 @@ impl Game {
 }
 
 fn parse_button(line: &str) -> Option<I64Vec2> {
-    let re = regex::Regex::new(r"X\+(\d+), Y\+(\d+)").unwrap();
-
-    if let Some(captures) = re.captures(line) {
+    if let Some(captures) = BUTTON_RE.captures(line) {
         let x = captures.get(1).unwrap().as_str().parse().unwrap();
         let y = captures.get(2).unwrap().as_str().parse().unwrap();
         Some(I64Vec2::new(x, y))
@@ -62,9 +66,7 @@ fn parse_button(line: &str) -> Option<I64Vec2> {
 }
 
 fn parse_prize(line: &str) -> Option<I64Vec2> {
-    let re = regex::Regex::new(r"X\=(\d+), Y\=(\d+)").unwrap();
-
-    if let Some(captures) = re.captures(line) {
+    if let Some(captures) = PRIZE_RE.captures(line) {
         let x = captures.get(1).unwrap().as_str().parse().unwrap();
         let y = captures.get(2).unwrap().as_str().parse().unwrap();
         Some(I64Vec2::new(x, y))
@@ -87,7 +89,7 @@ pub fn part_one(input: &str) -> Option<u64> {
         .collect();
 
     let cheapest_wins = games
-        .iter()
+        .par_iter()
         .map(|game| {
             if let Some((m, n)) = game.solve(0) {
                 m.unsigned_abs() * 3 + n.unsigned_abs()
@@ -114,7 +116,7 @@ pub fn part_two(input: &str) -> Option<u64> {
         .collect();
 
     let cheapest_wins = games
-        .iter()
+        .par_iter()
         .map(|game| {
             if let Some((m, n)) = game.solve(10_000_000_000_000) {
                 m.unsigned_abs() * 3 + n.unsigned_abs()
