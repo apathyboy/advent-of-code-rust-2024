@@ -10,7 +10,7 @@ enum PositionType {
     Obstacle,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 enum Facing {
     Up,
     Right,
@@ -53,59 +53,50 @@ impl Facing {
 }
 
 fn run_guard_simulation(
-    min_bounds: &IVec2,
-    max_bounds: &IVec2,
     grid: &HashMap<IVec2, PositionType>,
     guard_starting_position: IVec2,
     guard_starting_facing: Facing,
 ) -> Option<Vec<(IVec2, Facing)>> {
-    let mut visited: Vec<(IVec2, Facing)> = Vec::new();
+    use std::collections::HashSet;
+
+    let mut visited: HashSet<(IVec2, Facing)> = HashSet::new();
+    let mut path: Vec<(IVec2, Facing)> = Vec::new();
     let mut guard_pos = guard_starting_position;
     let mut guard_facing = guard_starting_facing;
 
-    visited.push((guard_pos, guard_facing));
+    visited.insert((guard_pos, guard_facing));
+    path.push((guard_pos, guard_facing));
 
-    while guard_pos.x >= min_bounds.x
-        && guard_pos.y >= min_bounds.y
-        && guard_pos.x <= max_bounds.x
-        && guard_pos.y <= max_bounds.y
-    {
+    while grid.contains_key(&guard_pos) {
         let next_pos = guard_pos + guard_facing.to_vec2();
-        let next_pos_type = grid.get(&next_pos);
-
-        match next_pos_type {
+        match grid.get(&next_pos) {
             Some(PositionType::Empty) => {
-                if visited.contains(&(next_pos, guard_facing)) {
+                if !visited.insert((next_pos, guard_facing)) {
+                    // Already visited, terminate to prevent infinite loop.
                     return None;
                 }
 
                 guard_pos = next_pos;
-                visited.push((guard_pos, guard_facing));
+                path.push((guard_pos, guard_facing));
             }
             Some(PositionType::Obstacle) => {
                 guard_facing = guard_facing.to_facing('R');
             }
             None => {
+                // Out of bounds or invalid position, terminate simulation.
                 break;
             }
         }
     }
 
-    Some(visited)
+    Some(path)
 }
 
-fn parse_grid(input: &str) -> (HashMap<IVec2, PositionType>, IVec2, Facing, IVec2, IVec2) {
+fn parse_grid(input: &str) -> (HashMap<IVec2, PositionType>, IVec2, Facing) {
     // parse the input as a 2D grid stored in a HashMap of Vec2 and PositionType
     let mut grid = HashMap::new();
     let mut guard_pos = IVec2::new(0, 0);
     let guard_facing = Facing::Up;
-
-    // get bounds of the grid
-    let min_bounds = IVec2::new(0, 0);
-    let max_bounds = IVec2::new(
-        input.lines().next().unwrap().len() as i32,
-        input.lines().count() as i32,
-    );
 
     for (y, line) in input.lines().enumerate() {
         for (x, c) in line.chars().enumerate() {
@@ -125,22 +116,22 @@ fn parse_grid(input: &str) -> (HashMap<IVec2, PositionType>, IVec2, Facing, IVec
         }
     }
 
-    (grid, guard_pos, guard_facing, min_bounds, max_bounds)
+    (grid, guard_pos, guard_facing)
 }
 
 pub fn part_one(input: &str) -> Option<u32> {
-    let (grid, guard_pos, guard_facing, min_bounds, max_bounds) = parse_grid(input);
+    let (grid, guard_pos, guard_facing) = parse_grid(input);
 
-    let visited = run_guard_simulation(&min_bounds, &max_bounds, &grid, guard_pos, guard_facing)?;
+    let visited = run_guard_simulation(&grid, guard_pos, guard_facing)?;
     let unique_positions: HashSet<IVec2> = visited.iter().map(|(pos, _)| pos).cloned().collect();
 
     Some(unique_positions.len() as u32)
 }
 
 pub fn part_two(input: &str) -> Option<u32> {
-    let (grid, guard_pos, guard_facing, min_bounds, max_bounds) = parse_grid(input);
+    let (grid, guard_pos, guard_facing) = parse_grid(input);
 
-    let visited = run_guard_simulation(&min_bounds, &max_bounds, &grid, guard_pos, guard_facing)?;
+    let visited = run_guard_simulation(&grid, guard_pos, guard_facing)?;
     let unique_positions: HashSet<IVec2> = visited
         .iter()
         .filter_map(|(pos, _)| {
@@ -157,8 +148,7 @@ pub fn part_two(input: &str) -> Option<u32> {
             let mut new_grid = grid.clone();
             new_grid.insert(*pos, PositionType::Obstacle);
 
-            let result =
-                run_guard_simulation(&min_bounds, &max_bounds, &new_grid, guard_pos, guard_facing);
+            let result = run_guard_simulation(&new_grid, guard_pos, guard_facing);
             if result.is_none() {
                 Some(*pos)
             } else {
