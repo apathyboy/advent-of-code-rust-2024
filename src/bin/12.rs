@@ -167,11 +167,9 @@ fn count_sides(region: &[IVec2]) -> usize {
     sides.len()
 }
 
-fn bulk_price_region(_name: &char, region: &Vec<IVec2>) -> u32 {
+fn bulk_price_region(_name: &char, region: &[IVec2]) -> u32 {
     let area = region.len() as u32;
     let sides = count_sides(region);
-
-    //println!("Region {} has {} sides and {} area", name, sides, area);
 
     area * sides as u32
 }
