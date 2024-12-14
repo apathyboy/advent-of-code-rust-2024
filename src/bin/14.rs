@@ -1,6 +1,6 @@
 use glam::IVec2;
+use once_cell::sync::Lazy;
 use regex::Regex;
-use std::collections::HashMap;
 
 advent_of_code::solution!(14);
 
@@ -22,24 +22,17 @@ impl Trajectory {
     }
 }
 
+static TRAJECTORY_REGEX: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"p=(-?\d+),(-?\d+)\s+v=(-?\d+),(-?\d+)").unwrap());
+
 fn parse_trajectory(input: &str) -> Option<Trajectory> {
-    let re = Regex::new(r"p=(-?\d+),(-?\d+)\s+v=(-?\d+),(-?\d+)").unwrap();
-
-    if let Some(captures) = re.captures(input) {
-        // Parse `p` coordinates
-        let px = captures[1].parse::<i32>().unwrap();
-        let py = captures[2].parse::<i32>().unwrap();
-        let p = IVec2::new(px, py);
-
-        // Parse `v` coordinates
-        let vx = captures[3].parse::<i32>().unwrap();
-        let vy = captures[4].parse::<i32>().unwrap();
-        let v = IVec2::new(vx, vy);
-
-        Some(Trajectory::new(p, v))
-    } else {
-        None
-    }
+    TRAJECTORY_REGEX.captures(input).and_then(|captures| {
+        let parse_coord = |idx: usize| captures.get(idx)?.as_str().parse::<i32>().ok();
+        Some(Trajectory::new(
+            IVec2::new(parse_coord(1)?, parse_coord(2)?),
+            IVec2::new(parse_coord(3)?, parse_coord(4)?),
+        ))
+    })
 }
 
 #[allow(dead_code)]
@@ -59,38 +52,44 @@ fn draw_grid(trajectories: &[Trajectory], extent: &IVec2) {
     println!();
 }
 
-fn max_contiguous_in_rows(vec: Vec<IVec2>) -> HashMap<i32, usize> {
-    let mut rows: HashMap<i32, Vec<i32>> = HashMap::new();
+fn max_contiguous_in_rows(trajectories: &[Trajectory], max: u32) -> bool {
+    // Sort the points by (y, x) to process rows and contiguous x-values in order
+    let mut sorted_points: Vec<IVec2> = trajectories.iter().map(|t| t.p).collect();
+    sorted_points.sort_unstable_by_key(|p| (p.y, p.x));
 
-    // Group elements by row (y coordinate)
-    for point in vec {
-        rows.entry(point.y).or_default().push(point.x);
-    }
+    // Variables to track current row and contiguous x-values
+    let mut current_y = None;
+    let mut prev_x = None;
+    let mut current_contiguous = 0;
 
-    let mut result: HashMap<i32, usize> = HashMap::new();
-
-    // For each row, find the max contiguous elements
-    for (y, mut x_values) in rows {
-        // Sort the x values
-        x_values.sort_unstable();
-
-        // Find the maximum number of contiguous x values
-        let mut max_contiguous = 1;
-        let mut current_contiguous = 1;
-
-        for i in 1..x_values.len() {
-            if x_values[i] == x_values[i - 1] + 1 {
-                current_contiguous += 1;
-                max_contiguous = max_contiguous.max(current_contiguous);
-            } else {
+    for point in sorted_points {
+        match current_y {
+            Some(y) if y == point.y => {
+                // Same row, check if x is contiguous
+                if let Some(prev_x) = prev_x {
+                    if point.x == prev_x + 1 {
+                        current_contiguous += 1;
+                        if current_contiguous >= max {
+                            return true;
+                        }
+                    } else {
+                        current_contiguous = 1;
+                    }
+                } else {
+                    current_contiguous = 1;
+                }
+                prev_x = Some(point.x);
+            }
+            _ => {
+                // New row, reset counters
+                current_y = Some(point.y);
+                prev_x = Some(point.x);
                 current_contiguous = 1;
             }
         }
-
-        result.insert(y, max_contiguous);
     }
 
-    result
+    false
 }
 
 pub fn part_one(input: &str) -> Option<u32> {
@@ -102,33 +101,33 @@ pub fn part_one(input: &str) -> Option<u32> {
         IVec2::new(101, 103)
     };
 
-    let extent_x_half = extent.x / 2;
-    let extent_y_half = extent.y / 2;
-
     for _ in 0..100 {
-        for trajectory in trajectories.iter_mut() {
-            trajectory.step(&extent);
-        }
+        trajectories
+            .iter_mut()
+            .for_each(|trajectory| trajectory.step(&extent));
     }
 
-    let quadrant1 = trajectories
-        .iter()
-        .filter(|t| t.p.x < extent_x_half && t.p.y < extent_y_half)
-        .count();
-    let quadrant2 = trajectories
-        .iter()
-        .filter(|t| t.p.x > extent_x_half && t.p.y < extent_y_half)
-        .count();
-    let quadrant3 = trajectories
-        .iter()
-        .filter(|t| t.p.x < extent_x_half && t.p.y > extent_y_half)
-        .count();
-    let quadrant4 = trajectories
-        .iter()
-        .filter(|t| t.p.x > extent_x_half && t.p.y > extent_y_half)
-        .count();
+    let (extent_x_half, extent_y_half) = (extent.x / 2, extent.y / 2);
 
-    Some(quadrant1 as u32 * quadrant2 as u32 * quadrant3 as u32 * quadrant4 as u32)
+    let quadrants = trajectories.iter().fold([0; 4], |mut counts, t| {
+        let (x, y) = (t.p.x, t.p.y);
+
+        // Skip cases where x or y are exactly on the half-extents
+        if x == extent_x_half || y == extent_y_half {
+            return counts;
+        }
+
+        let idx = match (x < extent_x_half, y < extent_y_half) {
+            (true, true) => 0,   // Quadrant 1
+            (false, true) => 1,  // Quadrant 2
+            (true, false) => 2,  // Quadrant 3
+            (false, false) => 3, // Quadrant 4
+        };
+        counts[idx] += 1;
+        counts
+    });
+
+    Some(quadrants.iter().map(|&q| q as u32).product())
 }
 
 pub fn part_two(input: &str) -> Option<u32> {
@@ -146,11 +145,7 @@ pub fn part_two(input: &str) -> Option<u32> {
         for trajectory in trajectories.iter_mut() {
             trajectory.step(&extent);
         }
-
-        let points: Vec<IVec2> = trajectories.iter().map(|t| t.p).collect();
-        let row_contiguous_count = max_contiguous_in_rows(points);
-
-        if row_contiguous_count.values().any(|&v| v > 10) {
+        if max_contiguous_in_rows(&trajectories, 10) {
             //draw_grid(&trajectories, &extent);
             break;
         }
