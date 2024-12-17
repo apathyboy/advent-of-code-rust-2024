@@ -60,30 +60,36 @@ fn run_guard_simulation(
     use std::collections::HashSet;
 
     let mut visited: HashSet<(IVec2, Facing)> = HashSet::new();
-    let mut path: Vec<(IVec2, Facing)> = Vec::new();
+    let mut path: Vec<(IVec2, Facing)> = Vec::with_capacity(128); // Preallocate to minimize reallocations
     let mut guard_pos = guard_starting_position;
     let mut guard_facing = guard_starting_facing;
 
+    // Insert the starting position
     visited.insert((guard_pos, guard_facing));
     path.push((guard_pos, guard_facing));
 
-    while grid.contains_key(&guard_pos) {
+    loop {
+        // Compute the next position
         let next_pos = guard_pos + guard_facing.to_vec2();
+
         match grid.get(&next_pos) {
             Some(PositionType::Empty) => {
+                // Early check to see if visited already, avoid double lookup
                 if !visited.insert((next_pos, guard_facing)) {
-                    // Already visited, terminate to prevent infinite loop.
+                    // Loop detected
                     return None;
                 }
 
+                // Move guard
                 guard_pos = next_pos;
                 path.push((guard_pos, guard_facing));
             }
             Some(PositionType::Obstacle) => {
+                // Rotate to the right only if blocked
                 guard_facing = guard_facing.to_facing('R');
             }
             None => {
-                // Out of bounds or invalid position, terminate simulation.
+                // Out of bounds
                 break;
             }
         }
