@@ -39,34 +39,43 @@ pub fn part_one(input: &str) -> Option<u64> {
 
 pub fn part_two(input: &str) -> Option<i64> {
     let mut program_id = 0;
-
     let mut disk = Vec::new();
 
+    // Build initial disk state
     for (i, c) in input.chars().enumerate() {
         if !c.is_ascii_digit() {
             continue;
         }
-
+        let count = c.to_digit(10).unwrap() as usize;
         if i % 2 == 0 {
-            for _ in 0..c.to_digit(10).unwrap() {
-                disk.push(program_id);
-            }
+            disk.resize(disk.len() + count, program_id);
             program_id += 1;
         } else {
-            for _ in 0..c.to_digit(10).unwrap() {
-                disk.push(-1);
-            }
+            disk.resize(disk.len() + count, -1);
         }
     }
 
     program_id -= 1;
 
     while program_id > 0 {
-        let file_pos = disk.iter().position(|&x| x == program_id).unwrap();
-        let file_len = disk.iter().filter(|&&x| x == program_id).count();
+        let mut file_pos = None;
+        let mut file_len = 0;
+
+        // Single pass to find file start and length
+        for (i, &id) in disk.iter().enumerate() {
+            if id == program_id {
+                file_pos = file_pos.or(Some(i));
+                file_len += 1;
+            } else if file_len > 0 {
+                break;
+            }
+        }
+
+        let file_pos = file_pos.unwrap();
 
         let mut free_space_offset = 0;
         while free_space_offset < file_pos {
+            // Find the next contiguous free space
             if disk[free_space_offset] == -1 {
                 let mut free_space_len = 0;
                 while free_space_offset + free_space_len < disk.len()
@@ -75,31 +84,29 @@ pub fn part_two(input: &str) -> Option<i64> {
                     free_space_len += 1;
                 }
 
-                if free_space_offset + free_space_len > file_pos {
+                // Check if the free space can fit the file
+                if free_space_len >= file_len {
+                    // Move file
+                    for i in 0..file_len {
+                        disk[free_space_offset + i] = program_id;
+                        disk[file_pos + i] = -1;
+                    }
                     break;
                 }
 
-                if free_space_len >= file_len {
-                    for i in 0..file_len {
-                        disk.swap(free_space_offset + i, file_pos + i);
-                    }
-                    break;
-                } else {
-                    free_space_offset += free_space_len + 1;
-                }
-            } else {
-                free_space_offset += 1;
+                free_space_offset += free_space_len;
             }
+            free_space_offset += 1;
         }
 
         program_id -= 1;
     }
 
+    // Calculate checksum
     let mut checksum = 0;
-
-    for (i, id) in disk.iter().enumerate() {
-        if disk[i] != -1 {
-            checksum += i as i64 * id;
+    for (i, &id) in disk.iter().enumerate() {
+        if id != -1 {
+            checksum += i as i64 * id as i64;
         }
     }
 

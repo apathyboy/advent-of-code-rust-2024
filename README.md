@@ -40,7 +40,7 @@ Solutions for [Advent of Code](https://adventofcode.com/) in [Rust](https://www.
 | [Day 6](./src/bin/06.rs) | `1.9ms` | `289.1ms` |
 | [Day 7](./src/bin/07.rs) | `703.3µs` | `5.4ms` |
 | [Day 8](./src/bin/08.rs) | `18.7µs` | `52.5µs` |
-| [Day 9](./src/bin/09.rs) | `1.3ms` | `365.5ms` |
+| [Day 9](./src/bin/09.rs) | `1.3ms` | `346.2ms` |
 | [Day 10](./src/bin/10.rs) | `780.0µs` | `730.1µs` |
 | [Day 11](./src/bin/11.rs) | `218.8µs` | `6.7ms` |
 | [Day 12](./src/bin/12.rs) | `6.3ms` | `9.2ms` |
@@ -49,7 +49,7 @@ Solutions for [Advent of Code](https://adventofcode.com/) in [Rust](https://www.
 | [Day 15](./src/bin/15.rs) | `35.5ms` | `48.4ms` |
 | [Day 16](./src/bin/16.rs) | `2.6ms` | `5.6ms` |
 
-**Total: 847.78ms**
+**Total: 828.48ms**
 <!--- benchmarking table --->
 
 *Benchmarks performed on a 2021 M1 Macbook Pro, 16GB*
