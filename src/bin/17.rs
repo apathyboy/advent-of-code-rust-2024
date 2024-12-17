@@ -23,11 +23,8 @@ impl Computer {
     }
 
     fn run(&mut self) {
-        //let mut i = 0;
         while self.ip < self.program.len() {
             self.run_cycle();
-
-            // i += 1;
         }
     }
 
@@ -62,7 +59,7 @@ impl Computer {
                 self.ip += 2;
             }
             1 => {
-                self.registers[1] = self.registers[1] ^ operand;
+                self.registers[1] ^= operand;
                 self.ip += 2;
             }
             2 => {
@@ -72,15 +69,13 @@ impl Computer {
             }
             3 => {
                 if self.registers[0] == 0 {
-                    // println!("Jumping ignored");
                     self.ip += 2;
                 } else {
-                    //println!("Jumping to {}", operand);
                     self.ip = operand as usize;
                 }
             }
             4 => {
-                self.registers[1] = self.registers[1] ^ self.registers[2];
+                self.registers[1] ^= self.registers[2];
                 self.ip += 2;
             }
             5 => {
