@@ -27,6 +27,41 @@ fn draw_map(corrupted: &HashSet<IVec2>, start: &IVec2, goal: &IVec2, path: &[IVe
     println!("{}", map);
 }
 
+fn run_simulation(
+    corrupted: &[IVec2],
+    start: &IVec2,
+    goal: &IVec2,
+    simulated_bytes: usize,
+) -> Option<Vec<IVec2>> {
+    let corrupted = corrupted
+        .iter()
+        .take(simulated_bytes)
+        .copied()
+        .collect::<HashSet<_>>();
+
+    let result = bfs(
+        start,
+        |pos| {
+            let mut neighbors = Vec::new();
+            for dir in &[
+                IVec2::new(0, 1),
+                IVec2::new(0, -1),
+                IVec2::new(1, 0),
+                IVec2::new(-1, 0),
+            ] {
+                let new_pos = pos + dir;
+                if in_bounds(&new_pos, &start, &goal) && !corrupted.contains(&new_pos) {
+                    neighbors.push(new_pos);
+                }
+            }
+            neighbors
+        },
+        |pos| pos == goal,
+    );
+
+    result
+}
+
 pub fn part_one(input: &str) -> Option<u32> {
     let simulated_bytes = if cfg!(test) { 12 } else { 1024 };
 
@@ -90,43 +125,22 @@ pub fn part_two(input: &str) -> Option<String> {
 
     let start_bytes = if cfg!(test) { 12 } else { 1024 };
 
-    let first_unreachable = (start_bytes..corrupted.len())
-        .find(|&simulated_bytes| {
-            let corrupted = corrupted
-                .iter()
-                .take(simulated_bytes)
-                .copied()
-                .collect::<HashSet<_>>();
+    let mut left = start_bytes;
+    let mut right = corrupted.len() - 1;
 
-            let result = bfs(
-                &start,
-                |pos| {
-                    let mut neighbors = Vec::new();
-                    for dir in &[
-                        IVec2::new(0, 1),
-                        IVec2::new(0, -1),
-                        IVec2::new(1, 0),
-                        IVec2::new(-1, 0),
-                    ] {
-                        let new_pos = pos + dir;
-                        if in_bounds(&new_pos, &start, &goal) && !corrupted.contains(&new_pos) {
-                            neighbors.push(new_pos);
-                        }
-                    }
-                    neighbors
-                },
-                |pos| *pos == goal,
-            );
+    loop {
+        let midpoint = (left + right) / 2;
+        if left + 1 == right {
+            break;
+        }
+        if run_simulation(&corrupted, &start, &goal, midpoint).is_some() {
+            left = midpoint;
+        } else {
+            right = midpoint;
+        }
+    }
 
-            result.is_none()
-        })
-        .unwrap();
-
-    Some(format!(
-        "{},{}",
-        corrupted[first_unreachable - 1].x,
-        corrupted[first_unreachable - 1].y
-    ))
+    Some(format!("{},{}", corrupted[left].x, corrupted[left].y))
 }
 
 #[cfg(test)]
