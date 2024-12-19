@@ -39,7 +39,7 @@ fn run_simulation(
         .copied()
         .collect::<HashSet<_>>();
 
-    let result = bfs(
+    bfs(
         start,
         |pos| {
             let mut neighbors = Vec::new();
@@ -50,16 +50,14 @@ fn run_simulation(
                 IVec2::new(-1, 0),
             ] {
                 let new_pos = pos + dir;
-                if in_bounds(&new_pos, &start, &goal) && !corrupted.contains(&new_pos) {
+                if in_bounds(&new_pos, start, goal) && !corrupted.contains(&new_pos) {
                     neighbors.push(new_pos);
                 }
             }
             neighbors
         },
         |pos| pos == goal,
-    );
-
-    result
+    )
 }
 
 pub fn part_one(input: &str) -> Option<u32> {
@@ -67,13 +65,12 @@ pub fn part_one(input: &str) -> Option<u32> {
 
     let corrupted = input
         .lines()
-        .take(simulated_bytes)
         .map(|line| {
             line.split_once(',')
                 .map(|(x, y)| IVec2::new(x.parse().unwrap(), y.parse().unwrap()))
                 .unwrap()
         })
-        .collect::<HashSet<_>>();
+        .collect::<Vec<_>>();
 
     let start = IVec2::new(0, 0);
     let goal = if cfg!(test) {
@@ -82,26 +79,7 @@ pub fn part_one(input: &str) -> Option<u32> {
         IVec2::new(70, 70)
     };
 
-    let result = bfs(
-        &start,
-        |pos| {
-            let mut neighbors = Vec::new();
-            for dir in &[
-                IVec2::new(0, 1),
-                IVec2::new(0, -1),
-                IVec2::new(1, 0),
-                IVec2::new(-1, 0),
-            ] {
-                let new_pos = pos + dir;
-                if in_bounds(&new_pos, &start, &goal) && !corrupted.contains(&new_pos) {
-                    neighbors.push(new_pos);
-                }
-            }
-            neighbors
-        },
-        |pos| *pos == goal,
-    )
-    .unwrap();
+    let result = run_simulation(&corrupted, &start, &goal, simulated_bytes).unwrap();
 
     Some(result.len() as u32 - 1)
 }
