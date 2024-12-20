@@ -1,32 +1,24 @@
 use itertools::Itertools;
+use regex::Regex;
 use std::collections::{HashMap, HashSet};
 
 advent_of_code::solution!(19);
 
+fn parse(input: &str) -> (Vec<&str>, Vec<&str>) {
+    let (towels_str, designs_str) = input.split_once("\n\n").unwrap();
+
+    let towels = towels_str.split(", ").collect();
+    let designs = designs_str.lines().collect();
+
+    (towels, designs)
+}
+
 pub fn part_one(input: &str) -> Option<u32> {
-    let (patterns, test_cases) = input
-        .split("\n\n")
-        .collect_tuple()
-        .expect("Input must have two parts separated by an empty line");
+    let (towels, designs) = parse(input);
 
-    let pattern_set: HashSet<&str> = patterns.split(", ").collect();
-    let mut memo: HashMap<String, bool> = HashMap::new();
+    let re = Regex::new(&format!(r#"^({})+$"#, towels.join("|"))).unwrap();
 
-    fn dfs(s: &str, patterns: &HashSet<&str>, memo: &mut HashMap<String, bool>) -> bool {
-        if let Some(&cached) = memo.get(s) {
-            return cached;
-        }
-        let result = s.is_empty()
-            || (0..s.len())
-                .any(|i| patterns.contains(&s[..=i]) && dfs(&s[i + 1..], patterns, memo));
-        memo.insert(s.to_string(), result);
-        result
-    }
-
-    let count = test_cases
-        .lines()
-        .filter(|&line| dfs(line, &pattern_set, &mut memo))
-        .count();
+    let count = designs.iter().filter(|design| re.is_match(design)).count();
 
     Some(count as u32)
 }
