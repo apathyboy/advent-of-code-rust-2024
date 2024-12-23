@@ -1,46 +1,36 @@
 use std::collections::HashMap;
 
-use rayon::vec;
-
 advent_of_code::solution!(23);
 
-pub fn part_one(input: &str) -> Option<u32> {
+fn parse(input: &str) -> HashMap<&str, Vec<&str>> {
     let mut network: HashMap<&str, Vec<&str>> = HashMap::new();
 
     for line in input.lines() {
         let (pc1, pc2) = line.split_once('-').unwrap();
 
-        if !network.contains_key(pc1) {
-            network.insert(pc1, Vec::new());
-            network.get_mut(pc1).unwrap().push(pc2);
-        } else {
-            network.get_mut(pc1).unwrap().push(pc2);
-        }
-
-        if !network.contains_key(pc2) {
-            network.insert(pc2, Vec::new());
-            network.get_mut(pc2).unwrap().push(pc1);
-        } else {
-            network.get_mut(pc2).unwrap().push(pc1);
-        }
+        network.entry(pc1).or_default().push(pc2);
+        network.entry(pc2).or_default().push(pc1);
     }
+
+    network
+}
+
+pub fn part_one(input: &str) -> Option<u32> {
+    let network = parse(input);
 
     let mut interconnected: Vec<Vec<&str>> = Vec::new();
 
-    for (pc, connected) in network.iter() {
-        // loop through all combinations of two connected computers and see if they are connected with each other
-        for i in 0..connected.len() {
-            for j in i + 1..connected.len() {
-                if network.get(connected[i]).unwrap().contains(&connected[j]) {
-                    let mut cur = vec![*pc, connected[i], connected[j]];
+    // Check all connections for interconnected triples
+    for (pc, connected) in &network {
+        for (i, &node1) in connected.iter().enumerate() {
+            for &node2 in &connected[i + 1..] {
+                if let Some(connections) = network.get(node1) {
+                    if connections.contains(&node2) {
+                        let mut cur = vec![*pc, node1, node2];
+                        cur.sort_unstable();
 
-                    cur.sort_by(|a, b| a.cmp(b));
-
-                    if cur[0].chars().nth(0).unwrap() == 't'
-                        || cur[1].chars().nth(0).unwrap() == 't'
-                        || cur[2].chars().nth(0).unwrap() == 't'
-                    {
-                        if !interconnected.contains(&cur) {
+                        // Check if any name starts with 't'
+                        if cur.iter().any(|&name| name.starts_with('t')) {
                             interconnected.push(cur);
                         }
                     }
@@ -49,56 +39,41 @@ pub fn part_one(input: &str) -> Option<u32> {
         }
     }
 
+    // Remove duplicate groups
+    interconnected.sort();
+    interconnected.dedup();
+
     Some(interconnected.len() as u32)
 }
 
 pub fn part_two(input: &str) -> Option<String> {
-    let mut network: HashMap<&str, Vec<&str>> = HashMap::new();
-
-    for line in input.lines() {
-        let (pc1, pc2) = line.split_once('-').unwrap();
-
-        if !network.contains_key(pc1) {
-            network.insert(pc1, Vec::new());
-            network.get_mut(pc1).unwrap().push(pc2);
-        } else {
-            network.get_mut(pc1).unwrap().push(pc2);
-        }
-
-        if !network.contains_key(pc2) {
-            network.insert(pc2, Vec::new());
-            network.get_mut(pc2).unwrap().push(pc1);
-        } else {
-            network.get_mut(pc2).unwrap().push(pc1);
-        }
-    }
+    let network = parse(input);
 
     let mut parties: Vec<Vec<&str>> = Vec::new();
 
     for (pc, connections) in network.iter() {
         let mut party = vec![*pc];
         // loop through all combinations of two connected computers and see if they are connected with each other
-        for i in 0..connections.len() {
+        for &connection in connections {
             if party
                 .iter()
-                .all(|&x| network.get(connections[i]).unwrap().contains(&x))
+                .all(|&x| network.get(connection).unwrap().contains(&x))
             {
-                party.push(connections[i]);
+                party.push(connection);
             }
         }
 
-        party.sort_by(|a, b| a.cmp(b));
+        party.sort_unstable();
 
         if !parties.contains(&party) {
             parties.push(party);
         }
     }
 
-    parties.sort_by(|a, b| a.len().cmp(&b.len()));
+    // Find the largest party
+    let largest_party = parties.into_iter().max_by_key(|party| party.len())?;
 
-    let result = parties.last().unwrap().join(",");
-
-    Some(result)
+    Some(largest_party.join(","))
 }
 
 #[cfg(test)]
