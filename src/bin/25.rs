@@ -17,17 +17,15 @@ pub fn part_one(input: &str) -> Option<u32> {
             _ => panic!("Invalid schematic type"),
         };
 
-        let mut columns = Vec::new();
-
-        for i in 0..5 {
-            let column_height = schematic
-                .lines()
-                .filter(|l| l.chars().nth(i).unwrap() == '#')
-                .count()
-                - 1;
-
-            columns.push(column_height);
-        }
+        let columns = (0..5)
+            .map(|i| {
+                schematic
+                    .lines()
+                    .filter(|l| l.chars().nth(i).unwrap() == '#')
+                    .count()
+                    - 1
+            })
+            .collect::<Vec<_>>();
 
         match schematic_type {
             SchematicType::Lock => locks.push(columns),
